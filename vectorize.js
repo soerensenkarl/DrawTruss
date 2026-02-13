@@ -245,7 +245,72 @@ const Vectorizer = (() => {
       edges.push({ id: edges.length, n1, n2 });
     }
 
-    return { nodes, edges };
+    // 7. Remove valency-2 nodes (pass-through points, not real joints)
+    return pruneValency2(nodes, edges);
+  }
+
+  function pruneValency2(nodes, edges) {
+    const COLLINEAR_THRESH = 15; // degrees — merge if angle deviation < this
+    const cosThresh = Math.cos((180 - COLLINEAR_THRESH) * Math.PI / 180);
+
+    let changed = true;
+    while (changed) {
+      changed = false;
+      const adj = new Map();
+      for (let i = 0; i < edges.length; i++) {
+        const e = edges[i];
+        if (!adj.has(e.n1)) adj.set(e.n1, []);
+        if (!adj.has(e.n2)) adj.set(e.n2, []);
+        adj.get(e.n1).push(i);
+        adj.get(e.n2).push(i);
+      }
+      for (const [nid, eids] of adj) {
+        if (eids.length !== 2) continue;
+        const e0 = edges[eids[0]];
+        const e1 = edges[eids[1]];
+        const neighbor0 = e0.n1 === nid ? e0.n2 : e0.n1;
+        const neighbor1 = e1.n1 === nid ? e1.n2 : e1.n1;
+        if (neighbor0 === neighbor1) continue;
+        // Check if edges are nearly collinear at this node
+        const n = nodes.find(nd => nd.id === nid);
+        const a = nodes.find(nd => nd.id === neighbor0);
+        const b = nodes.find(nd => nd.id === neighbor1);
+        const ax = a.x - n.x, ay = a.y - n.y;
+        const bx = b.x - n.x, by = b.y - n.y;
+        const dot = ax * bx + ay * by;
+        const magA = Math.sqrt(ax * ax + ay * ay);
+        const magB = Math.sqrt(bx * bx + by * by);
+        if (magA === 0 || magB === 0) continue;
+        const cosAngle = dot / (magA * magB);
+        // cosAngle ≈ -1 means ~180° (straight line); skip if real bend
+        if (cosAngle > cosThresh) continue;
+        // Merge: replace two edges with one
+        edges.splice(Math.max(eids[0], eids[1]), 1);
+        edges.splice(Math.min(eids[0], eids[1]), 1);
+        const dup = edges.some(e =>
+          (e.n1 === neighbor0 && e.n2 === neighbor1) ||
+          (e.n1 === neighbor1 && e.n2 === neighbor0));
+        if (!dup) {
+          edges.push({ id: 0, n1: neighbor0, n2: neighbor1 });
+        }
+        changed = true;
+        break;
+      }
+    }
+    // Rebuild with only referenced nodes, renumbered
+    const usedIds = new Set();
+    for (const e of edges) { usedIds.add(e.n1); usedIds.add(e.n2); }
+    const oldToNew = new Map();
+    const newNodes = [];
+    for (const n of nodes) {
+      if (!usedIds.has(n.id)) continue;
+      oldToNew.set(n.id, newNodes.length);
+      newNodes.push({ id: newNodes.length, x: n.x, y: n.y });
+    }
+    const newEdges = edges.map((e, i) => ({
+      id: i, n1: oldToNew.get(e.n1), n2: oldToNew.get(e.n2)
+    }));
+    return { nodes: newNodes, edges: newEdges };
   }
 
   return { vectorize, rdp };
