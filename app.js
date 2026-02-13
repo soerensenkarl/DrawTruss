@@ -45,6 +45,8 @@
 
   function startStroke(e) {
     if (truss) return; // locked while showing truss
+    // Let multi-touch through for browser pinch-to-zoom
+    if (e.touches && e.touches.length > 1) return;
     e.preventDefault();
     isDrawing = true;
     currentStroke = [getPos(e)];
@@ -53,6 +55,13 @@
 
   function moveStroke(e) {
     if (!isDrawing || !currentStroke) return;
+    // If a second finger arrives, cancel the stroke and let the browser zoom
+    if (e.touches && e.touches.length > 1) {
+      isDrawing = false;
+      currentStroke = null;
+      redrawStrokes();
+      return;
+    }
     e.preventDefault();
     const pos = getPos(e);
     currentStroke.push(pos);
