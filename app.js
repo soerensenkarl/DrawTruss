@@ -12,11 +12,7 @@
   const btnExportSVG = document.getElementById('btn-export-svg');
   const btnExportJSON = document.getElementById('btn-export-json');
   const snapSlider = document.getElementById('snap-radius');
-  const snapValue = document.getElementById('snap-value');
-
-  const infoNodes = document.getElementById('info-nodes');
-  const infoEdges = document.getElementById('info-edges');
-  const infoStatus = document.getElementById('info-status');
+  const info = document.getElementById('info');
 
   // ---- State ----------------------------------------------------------------
   let strokes = [];        // Array of stroke arrays [{x, y}, ...]
@@ -263,8 +259,6 @@
   btnExportJSON.addEventListener('click', exportJSON);
 
   snapSlider.addEventListener('input', () => {
-    snapValue.textContent = snapSlider.value;
-    // Live re-vectorize if truss already shown
     if (truss) doVectorize();
   });
 
@@ -283,15 +277,11 @@
   // ---- Status updates -------------------------------------------------------
   function updateStatus() {
     if (truss) {
-      infoNodes.textContent = `Nodes: ${truss.nodes.length}`;
-      infoEdges.textContent = `Edges: ${truss.edges.length}`;
-      infoStatus.textContent = 'Truss vectorized';
+      info.textContent = `${truss.nodes.length}N ${truss.edges.length}E`;
     } else {
-      infoNodes.textContent = 'Nodes: 0';
-      infoEdges.textContent = 'Edges: 0';
-      infoStatus.textContent = strokes.length > 0
-        ? `${strokes.length} stroke${strokes.length > 1 ? 's' : ''} — click Vectorize`
-        : 'Ready to draw';
+      info.textContent = strokes.length > 0
+        ? `${strokes.length} str`
+        : '';
     }
   }
 

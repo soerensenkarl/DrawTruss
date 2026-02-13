@@ -8,33 +8,20 @@
 </head>
 <body>
   <div id="app">
+    <div id="toolbar">
+      <button id="btn-undo" title="Undo last stroke">Undo</button>
+      <button id="btn-clear" title="Clear canvas">Clear</button>
+      <button id="btn-vectorize" class="primary" title="Convert drawing to truss">Vec</button>
+      <button id="btn-reset-truss" title="Remove vectorized truss" disabled>Reset</button>
+      <input type="range" id="snap-radius" min="10" max="60" value="30" title="Snap radius">
+      <button id="btn-export-svg" title="Export SVG" disabled>SVG</button>
+      <button id="btn-export-json" title="Export JSON" disabled>JSON</button>
+      <span id="info" class="info">0N 0E</span>
+    </div>
     <div id="canvas-container">
       <canvas id="draw-canvas"></canvas>
       <svg id="truss-svg" xmlns="http://www.w3.org/2000/svg"></svg>
-      <div id="hint">Draw lines to form a truss structure</div>
-
-      <div id="toolbar">
-        <button id="btn-undo" title="Undo last stroke">Undo</button>
-        <button id="btn-clear" title="Clear canvas">Clear</button>
-        <div class="separator"></div>
-        <button id="btn-vectorize" class="primary" title="Convert drawing to truss">Vectorize</button>
-        <button id="btn-reset-truss" title="Remove vectorized truss and go back to drawing" disabled>Reset</button>
-        <div class="separator"></div>
-        <label class="snap-label" title="Snap tolerance for clustering nearby endpoints into nodes">
-          Snap
-          <input type="range" id="snap-radius" min="10" max="60" value="30">
-          <span id="snap-value">30</span>
-        </label>
-        <div class="separator"></div>
-        <button id="btn-export-svg" title="Export truss as SVG" disabled>SVG</button>
-        <button id="btn-export-json" title="Export truss as JSON" disabled>JSON</button>
-      </div>
-
-      <div id="info-panel">
-        <span id="info-nodes">Nodes: 0</span>
-        <span id="info-edges">Edges: 0</span>
-        <span id="info-status">Ready</span>
-      </div>
+      <div id="hint">Draw lines to form a truss</div>
     </div>
   </div>
 
