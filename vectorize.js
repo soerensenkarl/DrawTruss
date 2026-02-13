@@ -5,13 +5,15 @@
  *   1. Simplify each stroke using the Ramer-Douglas-Peucker algorithm to get
  *      a polyline that approximates the freehand curve.
  *   2. Break each simplified polyline into individual line segments.
- *   3. Collect all segment endpoints.
- *   4. Cluster nearby endpoints within a snap radius into single nodes
+ *   3. Detect intersections between all segment pairs and split segments
+ *      at crossing points (so continuous chords get discretized by web members).
+ *   4. Collect all segment endpoints.
+ *   5. Cluster nearby endpoints within a snap radius into single nodes
  *      (using a simple greedy union-find approach).
- *   5. For every segment, map its two endpoints to the nearest cluster centroid,
+ *   6. For every segment, map its two endpoints to the nearest cluster centroid,
  *      producing an edge between two nodes.
- *   6. Deduplicate edges.
- *   7. Return { nodes: [{id, x, y}], edges: [{id, n1, n2}] }.
+ *   7. Deduplicate edges.
+ *   8. Return { nodes: [{id, x, y}], edges: [{id, n1, n2}] }.
  */
 
 const Vectorizer = (() => {
@@ -66,6 +68,53 @@ const Vectorizer = (() => {
       segments.push([simplified[i], simplified[i + 1]]);
     }
     return segments;
+  }
+
+  // ---- Intersection detection & segment splitting ----------------------------
+
+  function segmentIntersection(a1, a2, b1, b2) {
+    const dx1 = a2.x - a1.x, dy1 = a2.y - a1.y;
+    const dx2 = b2.x - b1.x, dy2 = b2.y - b1.y;
+    const denom = dx1 * dy2 - dy1 * dx2;
+    if (Math.abs(denom) < 1e-10) return null; // parallel
+    const dx3 = b1.x - a1.x, dy3 = b1.y - a1.y;
+    const t = (dx3 * dy2 - dy3 * dx2) / denom;
+    const u = (dx3 * dy1 - dy3 * dx1) / denom;
+    // Interior crossings only — endpoints are handled by snap clustering
+    const EPS = 0.02;
+    if (t <= EPS || t >= 1 - EPS || u <= EPS || u >= 1 - EPS) return null;
+    return { x: a1.x + t * dx1, y: a1.y + t * dy1, t, u };
+  }
+
+  function splitSegmentsAtIntersections(segments) {
+    const splits = segments.map(() => []);
+    for (let i = 0; i < segments.length; i++) {
+      for (let j = i + 1; j < segments.length; j++) {
+        const ix = segmentIntersection(
+          segments[i][0], segments[i][1],
+          segments[j][0], segments[j][1]
+        );
+        if (ix) {
+          splits[i].push({ t: ix.t, x: ix.x, y: ix.y });
+          splits[j].push({ t: ix.u, x: ix.x, y: ix.y });
+        }
+      }
+    }
+    const result = [];
+    for (let i = 0; i < segments.length; i++) {
+      if (splits[i].length === 0) {
+        result.push(segments[i]);
+        continue;
+      }
+      splits[i].sort((a, b) => a.t - b.t);
+      let prev = segments[i][0];
+      for (const sp of splits[i]) {
+        result.push([prev, { x: sp.x, y: sp.y }]);
+        prev = { x: sp.x, y: sp.y };
+      }
+      result.push([prev, segments[i][1]]);
+    }
+    return result;
   }
 
   // ---- Clustering (Union-Find on endpoints) ---------------------------------
@@ -153,20 +202,23 @@ const Vectorizer = (() => {
 
     if (allSegments.length === 0) return { nodes: [], edges: [] };
 
-    // 2. Collect all endpoints
+    // 2. Split segments at interior crossings
+    const splitSegs = splitSegmentsAtIntersections(allSegments);
+
+    // 3. Collect all endpoints
     const allPoints = [];
     const segPointIndices = []; // for each segment, [startIdx, endIdx]
-    for (const seg of allSegments) {
+    for (const seg of splitSegs) {
       const si = allPoints.length;
       allPoints.push(seg[0]);
       allPoints.push(seg[1]);
       segPointIndices.push([si, si + 1]);
     }
 
-    // 3. Cluster endpoints
+    // 4. Cluster endpoints
     const { mapping } = clusterPoints(allPoints, snapRadius);
 
-    // 4. Build unique node list
+    // 5. Build unique node list
     const nodeMap = new Map(); // "x,y" → node id
     const nodes = [];
 
@@ -179,7 +231,7 @@ const Vectorizer = (() => {
       return id;
     }
 
-    // 5. Build edges
+    // 6. Build edges
     const edgeSet = new Set();
     const edges = [];
 
