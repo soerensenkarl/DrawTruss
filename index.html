@@ -2,17 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
   <title>DrawTruss</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div id="app">
-    <div id="canvas-container">
-      <canvas id="draw-canvas"></canvas>
-      <svg id="truss-svg" xmlns="http://www.w3.org/2000/svg"></svg>
-      <div id="hint">Draw lines to form a truss</div>
-    </div>
     <div id="toolbar">
       <button id="btn-undo" title="Undo last stroke">Undo</button>
       <button id="btn-clear" title="Clear canvas">Clear</button>
@@ -22,6 +17,11 @@
       <button id="btn-export-svg" title="Export SVG" disabled>SVG</button>
       <button id="btn-export-json" title="Export JSON" disabled>JSON</button>
       <span id="info" class="info"></span>
+    </div>
+    <div id="canvas-container">
+      <canvas id="draw-canvas"></canvas>
+      <svg id="truss-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div id="hint">Draw lines to form a truss</div>
     </div>
   </div>
 
